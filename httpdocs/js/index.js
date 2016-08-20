@@ -11,7 +11,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 →addEventListenerだけでattachEventをカバーできるようにする
 */
 
-// polyfill
+// bind polyfill
 if (!Function.prototype.bind) {
 	Function.prototype.bind = function (oThis) {
 		if (typeof this !== "function") {
@@ -34,55 +34,85 @@ if (!Function.prototype.bind) {
 	};
 }
 
+// addEventListener polyfill incomplete
+// if(window.addEventListener){
+// 	window.addEventListener = window.addEventListener;
+// } else if(window.attachEvent){
+// 	window.addEventListener = window.attachEvent;
+// }
+
 var ZAWA = ZAWA || {};
 (function () {
+	'use strict';
 
-	ZAWA.Throttle = function () {
-		var Throttle = function () {
-			function Throttle(interval, callback) {
-				_classCallCheck(this, Throttle);
+	var Throttle = function () {
+		function Throttle(interval, callback) {
+			_classCallCheck(this, Throttle);
 
-				this._interval = interval;
-				this._lastTime = 0;
-				this._callback = callback;
+			this._interval = interval;
+			this._callback = callback;
+			this._lastTime = 0;
 
-				this._init();
+			this._init();
+		}
+
+		_createClass(Throttle, [{
+			key: "_init",
+			value: function _init() {
+				this._lastTime = new Date().getTime() - this._interval;
 			}
-
-			_createClass(Throttle, [{
-				key: "_init",
-				value: function _init() {
-					this._lastTime = new Date().getTime() - this._interval;
+		}, {
+			key: "run",
+			value: function run() {
+				if (this._lastTime + this._interval <= new Date().getTime()) {
+					this._lastTime = new Date().getTime();
+					this._callback();
+					return;
 				}
-			}, {
-				key: "run",
-				value: function run() {
-					if (this._lastTime + this._interval <= new Date().getTime()) {
-						this._lastTime = new Date().getTime();
-						this._callback();
-						return;
-					}
-				}
-			}]);
-
-			return Throttle;
-		}();
+			}
+		}]);
 
 		return Throttle;
 	}();
+
+	ZAWA.Throttle = Throttle;
+
+	var Debounce = function () {
+		function Debounce(interval, callback) {
+			_classCallCheck(this, Debounce);
+
+			this._interval = interval;
+			this._callback = callback;
+			this._timer = 0;
+		}
+
+		_createClass(Debounce, [{
+			key: "run",
+			value: function run() {
+				var _this = this;
+
+				clearTimeout(this._timer);
+				this._timer = setTimeout(function () {
+					_this._callback();
+				}, this._interval);
+			}
+		}]);
+
+		return Debounce;
+	}();
+
+	ZAWA.Debounce = Debounce;
 })();
 
 var throttle = new ZAWA.Throttle(500, hello);
+var debounce = new ZAWA.Debounce(500, hello);
 
-if (window.addEventListener) {
-	window.addEventListener('resize', function () {
-		throttle.run();
-	}, false);
-} else if (window.attachEvent) {
-	window.attachEvent('onresize', function () {
-		throttle.run();
-	});
-}
+$(window).on('resize', function () {
+	throttle.run();
+});
+$(window).on('resize', function () {
+	debounce.run();
+});
 
 function hello() {
 	console.log('hello');

@@ -5,7 +5,7 @@
 →addEventListenerだけでattachEventをカバーできるようにする
 */
 
-// polyfill
+// bind polyfill
 if (!Function.prototype.bind) {
   Function.prototype.bind = function (oThis) {
     if (typeof this !== "function") {
@@ -31,45 +31,63 @@ if (!Function.prototype.bind) {
   };
 }
 
+// addEventListener polyfill incomplete
+// if(window.addEventListener){
+// 	window.addEventListener = window.addEventListener;
+// } else if(window.attachEvent){
+// 	window.addEventListener = window.attachEvent;
+// }
+
 var ZAWA = ZAWA || {};
 (function(){
+	'use strict';
 
-	ZAWA.Throttle = (function(){
+	class Throttle{
+		constructor(interval, callback){
+			this._interval = interval;
+			this._callback = callback;
+			this._lastTime = 0;
 
-		class Throttle {
-			constructor(interval, callback){
-				this._interval = interval;
-				this._lastTime = 0;
-				this._callback = callback;
-
-				this._init();
-			}
-
-			_init () {
-				this._lastTime = new Date().getTime() - this._interval;
-			}
-
-			run () {
-				if((this._lastTime + this._interval) <= new Date().getTime()){
-					this._lastTime = new Date().getTime();
-					this._callback();
-					return;
-				}
-			}
+			this._init();
 		}
 
-		return Throttle;
-	}());
+		_init(){
+			this._lastTime = new Date().getTime() - this._interval;
+		}
+
+		run(){
+			if((this._lastTime + this._interval) <= new Date().getTime()){
+				this._lastTime = new Date().getTime();
+				this._callback();
+				return;
+			}
+		}
+	}
+	ZAWA.Throttle = Throttle;
+
+	class Debounce{
+		constructor(interval, callback){
+			this._interval = interval;
+			this._callback = callback;
+			this._timer = 0;
+		}
+
+		run(){
+			clearTimeout(this._timer);
+			this._timer = setTimeout(()=>{
+				this._callback();
+			}, this._interval);
+		}
+	}
+	ZAWA.Debounce = Debounce;
 
 }());
 
 var throttle = new ZAWA.Throttle(500, hello);
+var debounce = new ZAWA.Debounce(500, hello);
 
-if(window.addEventListener){
-	window.addEventListener('resize', () => { throttle.run(); }, false);
-} else if(window.attachEvent){
-	window.attachEvent('onresize', () => { throttle.run(); });
-}
+$(window).on('resize', () => { throttle.run(); });
+$(window).on('resize', () => { debounce.run(); });
 
 function hello(){
 	console.log('hello');
